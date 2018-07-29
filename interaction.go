@@ -116,7 +116,7 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nVersion:", parameters.Branch), versionOptions(buildParameters))
 	case actionVersion:
-		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nVersion: `%s`", parameters.Branch, parameters.Version), buildNumberOptions(parameters))
+		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nVersion: `%s`\nBuild:", parameters.Branch, parameters.Version), buildNumberOptions(parameters))
 	case actionBuildNumber:
 		currentVersion := fmt.Sprintf("%s (%s)", parameters.CurrentVersion, parameters.CurrentBuildNumber)
 		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
