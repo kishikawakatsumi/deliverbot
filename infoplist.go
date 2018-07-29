@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/blang/semver"
 	"howett.net/plist"
-	"io/ioutil"
 	"strconv"
 )
 
@@ -18,19 +17,13 @@ type InfoPlist struct {
 	raw    []byte
 }
 
-func NewInfoPlist(path string) (*InfoPlist, error) {
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
+func NewInfoPlist(bytes []byte) (*InfoPlist, error) {
 	var object map[string]interface{}
 	if _, err := plist.Unmarshal(bytes, &object); err != nil {
 		return nil, err
 	}
 
 	infoPlist := InfoPlist{
-		Path:   path,
 		object: object,
 		raw:    bytes,
 	}
@@ -60,17 +53,6 @@ func (infoPlist *InfoPlist) NextMajor() (string, error) {
 	return version.String(), nil
 }
 
-func (infoPlist *InfoPlist) IncrementMajor() error {
-	versionString, err := infoPlist.NextMajor()
-	if err != nil {
-		return err
-	}
-
-	infoPlist.object[versionKey] = versionString
-
-	return nil
-}
-
 func (infoPlist *InfoPlist) NextMinor() (string, error) {
 	versionString := infoPlist.VersionString()
 	version, err := semver.Make(versionString)
@@ -82,17 +64,6 @@ func (infoPlist *InfoPlist) NextMinor() (string, error) {
 	version.Patch = 0
 
 	return version.String(), nil
-}
-
-func (infoPlist *InfoPlist) IncrementMinor() error {
-	versionString, err := infoPlist.NextMinor()
-	if err != nil {
-		return err
-	}
-
-	infoPlist.object[versionKey] = versionString
-
-	return nil
 }
 
 func (infoPlist *InfoPlist) NextPatch() (string, error) {
@@ -107,17 +78,6 @@ func (infoPlist *InfoPlist) NextPatch() (string, error) {
 	return version.String(), nil
 }
 
-func (infoPlist *InfoPlist) IncrementPatch() error {
-	versionString, err := infoPlist.NextPatch()
-	if err != nil {
-		return err
-	}
-
-	infoPlist.object[versionKey] = versionString
-
-	return nil
-}
-
 func (infoPlist *InfoPlist) NextBuildNumber() (string, error) {
 	buildNumberString := infoPlist.BuildNumberString()
 	buildNumber, err := strconv.Atoi(buildNumberString)
@@ -128,32 +88,16 @@ func (infoPlist *InfoPlist) NextBuildNumber() (string, error) {
 	return strconv.Itoa(buildNumber + 1), nil
 }
 
-func (infoPlist *InfoPlist) IncrementBuildNumber() error {
-	buildNumberString, err := infoPlist.NextBuildNumber()
-	if err != nil {
-		return err
-	}
-
-	infoPlist.object[buildNumberKey] = buildNumberString
-
-	return nil
-}
-
 func (infoPlist *InfoPlist) SetVersion(version string, build string) {
 	infoPlist.object[versionKey] = version
 	infoPlist.object[buildNumberKey] = build
 }
 
-func (infoPlist *InfoPlist) WriteToFile(path string) error {
+func (infoPlist *InfoPlist) serialized() ([]byte, error) {
 	bytes, err := plist.MarshalIndent(&infoPlist.object, plist.XMLFormat, "\t")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = ioutil.WriteFile(path, bytes, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return bytes, nil
 }

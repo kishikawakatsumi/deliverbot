@@ -3,36 +3,24 @@ package main
 import (
 	"fmt"
 	"github.com/nlopes/slack"
-	"log"
 	"strings"
-	"encoding/json"
 )
 
 const (
-	releaseMasterBranch = "releaseMasterBranch"
-	releaseOtherBranch  = "releaseOtherBranch"
-	currentVersion      = "currentVersion"
-	incrementPatch      = "incrementPatch"
-	incrementMinor      = "incrementMinor"
-	incrementMajor      = "incrementMajor"
-	defaultBuildNumber  = "defaultBuildNumber"
-	customBuildNumber   = "customBuildNumber"
+	actionBranch      = "branch"
+	actionVersion     = "version"
+	actionBuildNumber = "buildNumber"
+	actionRun         = "run"
+	actionCancel      = "cancel"
+
+	callbackID        = "deliver:parameters"
+	helpMessage       = "```\nCommand:\n\t@applebot deliver\n```"
 )
 
 type SlackListener struct {
-	client            *slack.Client
-	botID             string
-	channelID         string
-	repositoryOptions RepositoryOptions
-}
-
-type RepositoryOptions struct {
-	path          string
-	credential    Credential
-	slug          string
-	author        Author
-	infoPlistPath string
-	branches      string
+	client    *slack.Client
+	botID     string
+	channelID string
 }
 
 func (s *SlackListener) ListenAndResponse() {
@@ -43,7 +31,7 @@ func (s *SlackListener) ListenAndResponse() {
 		switch ev := msg.Data.(type) {
 		case *slack.MessageEvent:
 			if err := s.handleMessageEvent(ev); err != nil {
-				log.Printf("[ERROR] Failed to handle message: %s", err)
+				sugar.Errorf("Failed to handle message: %s", err)
 			}
 		}
 	}
@@ -54,74 +42,94 @@ func (s *SlackListener) handleMessageEvent(ev *slack.MessageEvent) error {
 		return nil
 	}
 
-	helpMessage := "```\nCommand:\n\t@applebot deliver\n```"
-
 	fields := strings.Fields(ev.Msg.Text)
-	if len(fields) == 0 {
+	if len(fields) == 0 || len(fields) > 2 {
 		return nil
 	}
-	if len(fields) == 1 && fields[0] == fmt.Sprintf("<@%s>", s.botID) {
-		// Show help
-		if _, _, err := s.client.PostMessage(ev.Channel, helpMessage, slack.NewPostMessageParameters()); err != nil {
+
+	mentionToBot := fields[0] == fmt.Sprintf("<@%s>", s.botID)
+	if len(fields) == 1 && mentionToBot {
+		err := s.respond(ev.Channel, helpMessage)
+		return err
+	}
+	if len(fields) == 2 && mentionToBot && fields[1] == "ping" {
+		err := s.respond(ev.Channel, "pong")
+		return err
+	}
+	if len(fields) == 2 && mentionToBot && fields[1] == "help" {
+		err := s.respond(ev.Channel, helpMessage)
+		return err
+	}
+	if len(fields) == 2 && mentionToBot && fields[1] == "deliver" {
+		buildParameters := BuildParameters{}
+
+		actions, err := branchOptions(buildParameters)
+		if err != nil {
+			return err
+		}
+		messageParameters := slack.PostMessageParameters{
+			Attachments: []slack.Attachment{
+				slack.Attachment{
+					Text:       "Branch:",
+					CallbackID: callbackID,
+					Actions:    actions,
+				},
+			},
+		}
+
+		if _, _, err := s.client.PostMessage(ev.Channel, "", messageParameters); err != nil {
 			return fmt.Errorf("failed to post message: %s", err)
 		}
 		return nil
 	}
-	if len(fields) == 2 && fields[0] == fmt.Sprintf("<@%s>", s.botID) {
-		if fields[1] == "deliver" {
-			var options []slack.AttachmentActionOption
-			var branches []string
-			if err := json.Unmarshal([]byte(s.repositoryOptions.branches), &branches); err != nil {
-				return err
-			}
-			for _, branch := range branches {
-				options = append(options, slack.AttachmentActionOption{
-					Text:  branch,
-					Value: branch,
-				})
-			}
-			attachment := slack.Attachment{
-				Text:       "Which branch?",
-				CallbackID: "select:branch",
-				Actions: []slack.AttachmentAction{
-					{
-						Name:  releaseMasterBranch,
-						Text:  "master",
-						Value: "master",
-						Type:  "button",
-						Style: "primary",
-					},
-					{
-						Name:    releaseOtherBranch,
-						Type:    "select",
-						Options: options,
-					},
-				},
-			}
-			parameters := slack.PostMessageParameters{
-				Attachments: []slack.Attachment{
-					attachment,
-				},
-			}
-
-			if _, _, err := s.client.PostMessage(ev.Channel, "", parameters); err != nil {
-				return fmt.Errorf("failed to post message: %s", err)
-			}
-			return nil
-		}
-		if fields[1] == "ping" {
-			if _, _, err := s.client.PostMessage(ev.Channel, "pong", slack.NewPostMessageParameters()); err != nil {
-				return fmt.Errorf("failed to post message: %s", err)
-			}
-			return nil
-		}
-		if fields[1] == "help" {
-			if _, _, err := s.client.PostMessage(ev.Channel, helpMessage, slack.NewPostMessageParameters()); err != nil {
-				return fmt.Errorf("failed to post message: %s", err)
-			}
-			return nil
-		}
-	}
 
 	return nil
+}
+
+func branchOptions(parameters BuildParameters) ([]slack.AttachmentAction, error) {
+	defaultBranch, err := service.DefaultBranch()
+	if err != nil {
+		return []slack.AttachmentAction{}, err
+	}
+
+	var options []slack.AttachmentActionOption
+	branches, err := service.Branches()
+	if err != nil {
+		return []slack.AttachmentAction{}, err
+	}
+	for _, branch := range branches {
+		if branch.GetName() == *defaultBranch {
+			continue
+		}
+		featureBranchParameters := parameters
+		featureBranchParameters.Branch = branch.GetName()
+		options = append(options, slack.AttachmentActionOption{
+			Text:  branch.GetName(),
+			Value: featureBranchParameters.string(),
+		})
+	}
+
+	defaultBranchParameters := parameters
+	defaultBranchParameters.Branch = *defaultBranch
+	actions := []slack.AttachmentAction{
+		{
+			Name:  actionBranch,
+			Text:  defaultBranchParameters.Branch,
+			Value: defaultBranchParameters.string(),
+			Type:  "button",
+			Style: "primary",
+		},
+		{
+			Name:    actionBranch,
+			Text:    "Other branch...",
+			Type:    "select",
+			Options: options,
+		},
+	}
+	return actions, nil
+}
+
+func (s *SlackListener) respond(channel string, text string) error {
+	_, _, err := s.client.PostMessage(channel, text, slack.NewPostMessageParameters())
+	return fmt.Errorf("failed to post message: %s", err)
 }
