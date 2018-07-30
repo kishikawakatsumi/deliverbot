@@ -54,7 +54,7 @@ func NewGitHubService(token string, repo GitHubRepository, author CommitAuthor) 
 func (g *GitHubService) DefaultBranch() (*string, error) {
 	repo, _, err := g.Client.Repositories.Get(context.Background(), g.Repository.Owner, g.Repository.Name)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to fetch GitHub repository: %s", err)
+		return nil, fmt.Errorf("failed to fetch GitHub repository: %s", err)
 	}
 	defaultBranch := repo.GetDefaultBranch()
 	return &defaultBranch, nil
@@ -65,7 +65,7 @@ func (g *GitHubService) Branches() ([]github.Branch, error) {
 		PerPage: 100,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to fetch GitHub branches: %s", err)
+		return nil, fmt.Errorf("failed to fetch GitHub branches: %s", err)
 	}
 	return filter(branches, func(branch github.Branch) bool { return !strings.Contains(branch.GetName(), "/") }), nil
 }
@@ -75,12 +75,12 @@ func (g *GitHubService) File(branch, path string) ([]byte, error) {
 		Ref: branch,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to download file from GitHub: %s", err)
+		return nil, fmt.Errorf("failed to download file from GitHub: %s", err)
 	}
 
 	bytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to download file from GitHub: %s", err)
+		return nil, fmt.Errorf("failed to download file from GitHub: %s", err)
 	}
 
 	return bytes, nil
