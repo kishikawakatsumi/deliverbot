@@ -69,7 +69,7 @@ func (s *SlackListener) handleMessageEvent(ev *slack.MessageEvent) error {
 		}
 		messageParameters := slack.PostMessageParameters{
 			Attachments: []slack.Attachment{
-				slack.Attachment{
+				{
 					Text:       "Branch:",
 					CallbackID: callbackID,
 					Actions:    actions,

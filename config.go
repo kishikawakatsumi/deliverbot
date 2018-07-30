@@ -124,8 +124,8 @@ func LoadConfig() (Config, error) {
 	return config, nil
 }
 
-func loadToml(path string) (*Config, error) {
-	var config Config
+func loadToml(path string) (*tomlConfig, error) {
+	var config tomlConfig
 	if _, err := toml.DecodeFile(path, &config, ""); err != nil {
 		return nil, err
 	}
