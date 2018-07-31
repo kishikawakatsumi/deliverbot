@@ -5,6 +5,8 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"os"
+	"fmt"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -23,34 +25,45 @@ func _main(_ []string) int {
 	sugar = logger.Sugar()
 
 	//var env envConfig
-	config, err := LoadConfig()
+	app := FlagSet()
+	app.Action = func(c *cli.Context) error {
+		if c.String("config") == "" {
+			return fmt.Errorf("required -c option")
+		}
+		// load config
+		config, err := LoadConfig(c.String("config"), c.String("region"))
+		if err != nil {
+			return fmt.Errorf("failed to load toml file: %s", err)
+		}
+
+		repo := GitHubRepository{Owner: config.GitHubRepositoryOwner, Name: config.GitHubRepositoryName}
+		author := CommitAuthor{Name: config.GitCommitAuthorName, Email: config.GitCommitAuthorEmail}
+		service = NewGitHubService(config.GitHubToken, repo, author)
+
+		sugar.Infof("Start slack event listening")
+		client := slack.New(config.BotToken)
+		slackListener := &SlackListener{
+			client:    client,
+			botID:     config.BotID,
+			channelID: config.ChannelID,
+		}
+		go slackListener.ListenAndResponse()
+
+		http.Handle("/interaction", interactionHandler{
+			verificationToken: config.VerificationToken,
+		})
+
+		sugar.Infof("Server listening on :%s", c.String("port"))
+		if err := http.ListenAndServe(":"+c.String("port"), nil); err != nil {
+			return fmt.Errorf("%s", err)
+		}
+		return nil
+	}
+
+	err := app.Run(os.Args)
 	if err != nil {
-		sugar.Errorf("Failed to load system config: %s", err)
+		sugar.Fatal(err)
 		return 1
 	}
-
-	repo := GitHubRepository{Owner: config.GitHubRepositoryOwner, Name: config.GitHubRepositoryName}
-	author := CommitAuthor{Name: config.GitCommitAuthorName, Email: config.GitCommitAuthorEmail}
-	service = NewGitHubService(config.GitHubToken, repo, author)
-
-	sugar.Infof("Start slack event listening")
-	client := slack.New(config.BotToken)
-	slackListener := &SlackListener{
-		client:    client,
-		botID:     config.BotID,
-		channelID: config.ChannelID,
-	}
-	go slackListener.ListenAndResponse()
-
-	http.Handle("/interaction", interactionHandler{
-		verificationToken: config.VerificationToken,
-	})
-
-	sugar.Infof("Server listening on :%s", config.Port)
-	if err := http.ListenAndServe(":"+config.Port, nil); err != nil {
-		sugar.Errorf("%s", err)
-		return 1
-	}
-
 	return 0
 }
