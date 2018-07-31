@@ -6,7 +6,6 @@ import (
 )
 
 type Config struct {
-	Port                  string
 	BotToken              string
 	VerificationToken     string
 	BotID                 string
@@ -22,7 +21,6 @@ type Config struct {
 }
 
 type envConfig struct {
-	Port                  string `envconfig:"PORT" default:"3000"`
 	BotToken              string `envconfig:"BOT_TOKEN"`
 	VerificationToken     string `envconfig:"VERIFICATION_TOKEN"`
 	BotID                 string `envconfig:"BOT_ID"`
@@ -38,7 +36,6 @@ type envConfig struct {
 }
 
 type tomlConfig struct {
-	Port                  string `toml:"port"`
 	BotToken              string `toml:"bot_token"`
 	VerificationToken     string `toml:"verification_token"`
 	BotID                 string `toml:"bot_id"`
@@ -53,25 +50,21 @@ type tomlConfig struct {
 	InfoPlistPath         string `toml:"infoplist_path"`
 }
 
-func LoadConfig() (Config, error) {
+func LoadConfig(path, region string) (*Config, error) {
 	var config Config
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
 		sugar.Errorf("Failed to process env var: %s", err)
-		return config, err
+		return nil, err
 	}
 
-	tc, err := loadToml("config.toml")
+	tc, err := loadToml(path, region)
 	if err != nil {
 		sugar.Errorf("Failed to load 'config.toml': %s", err)
-		return config, err
+		return nil, err
 	}
 
-	config.Port = tc.Port
-	if env.Port != "" {
-		config.Port = env.Port
-	}
 	config.BotToken = tc.BotToken
 	if env.BotToken != "" {
 		config.BotToken = env.BotToken
@@ -121,12 +114,12 @@ func LoadConfig() (Config, error) {
 		config.InfoPlistPath = env.InfoPlistPath
 	}
 
-	return config, nil
+	return &config, nil
 }
 
-func loadToml(path string) (*tomlConfig, error) {
+func loadToml(path , region string) (*tomlConfig, error) {
 	var config tomlConfig
-	if _, err := toml.DecodeFile(path, &config, ""); err != nil {
+	if _, err := toml.DecodeFile(path, &config, region); err != nil {
 		return nil, err
 	}
 	return &config, nil
