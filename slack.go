@@ -21,6 +21,7 @@ type SlackListener struct {
 	client    *slack.Client
 	botID     string
 	channelID string
+	debugChannelID string
 }
 
 func (s *SlackListener) ListenAndResponse() {
@@ -38,7 +39,7 @@ func (s *SlackListener) ListenAndResponse() {
 }
 
 func (s *SlackListener) handleMessageEvent(ev *slack.MessageEvent) error {
-	if ev.Channel != s.channelID {
+	if ev.Channel != s.channelID && ev.Channel != s.debugChannelID {
 		return nil
 	}
 

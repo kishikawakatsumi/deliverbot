@@ -46,6 +46,7 @@ func _main(_ []string) int {
 			client:    client,
 			botID:     config.BotID,
 			channelID: config.ChannelID,
+		debugChannelID: config.DebugChannelID,
 		}
 		go slackListener.ListenAndResponse()
 
