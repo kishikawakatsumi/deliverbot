@@ -1,18 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"github.com/nlopes/slack"
+	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
-	"fmt"
-	"github.com/urfave/cli"
 )
 
 var (
-	logger        *zap.Logger
-	sugar         *zap.SugaredLogger
-	service       *GitHubService
+	logger  *zap.Logger
+	sugar   *zap.SugaredLogger
+	service *GitHubService
 )
 
 func main() {
@@ -43,9 +43,10 @@ func _main(_ []string) int {
 		sugar.Infof("Start slack event listening")
 		client := slack.New(config.BotToken)
 		slackListener := &SlackListener{
-			client:    client,
-			botID:     config.BotID,
-			channelID: config.ChannelID,
+			client:         client,
+			botID:          config.BotID,
+			channelID:      config.ChannelID,
+			debugChannelID: config.DebugChannelID,
 		}
 		go slackListener.ListenAndResponse()
 

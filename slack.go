@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/nlopes/slack"
 	"strings"
+
+	"github.com/nlopes/slack"
 )
 
 const (
@@ -18,9 +19,10 @@ const (
 )
 
 type SlackListener struct {
-	client    *slack.Client
-	botID     string
-	channelID string
+	client         *slack.Client
+	botID          string
+	channelID      string
+	debugChannelID string
 }
 
 func (s *SlackListener) ListenAndResponse() {
@@ -38,7 +40,7 @@ func (s *SlackListener) ListenAndResponse() {
 }
 
 func (s *SlackListener) handleMessageEvent(ev *slack.MessageEvent) error {
-	if ev.Channel != s.channelID {
+	if ev.Channel != s.channelID && ev.Channel != s.debugChannelID {
 		return nil
 	}
 
