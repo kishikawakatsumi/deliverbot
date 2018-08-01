@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/nlopes/slack"
 	"strings"
+
+	"github.com/nlopes/slack"
 )
 
 const (
@@ -18,9 +19,9 @@ const (
 )
 
 type SlackListener struct {
-	client    *slack.Client
-	botID     string
-	channelID string
+	client         *slack.Client
+	botID          string
+	channelID      string
 	debugChannelID string
 }
 

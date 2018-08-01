@@ -117,7 +117,7 @@ func LoadConfig(path, region string) (*Config, error) {
 	return &config, nil
 }
 
-func loadToml(path , region string) (*tomlConfig, error) {
+func loadToml(path, region string) (*tomlConfig, error) {
 	var config tomlConfig
 	if _, err := toml.DecodeFile(path, &config, region); err != nil {
 		return nil, err
