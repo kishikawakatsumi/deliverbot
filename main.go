@@ -51,6 +51,7 @@ func _main(_ []string) int {
 		go slackListener.ListenAndResponse()
 
 		http.Handle("/interaction", interactionHandler{
+			slackClient:       client,
 			verificationToken: config.VerificationToken,
 		})
 

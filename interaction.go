@@ -57,7 +57,7 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch action.Name {
 	case actionBranch:
-		file, err := service.File(parameters.Branch, "Folio/Info.plist")
+		file, err := service.File(parameters.Branch, service.InfoPlistPath)
 		if err != nil {
 			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
 			return
@@ -145,16 +145,21 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			title := fmt.Sprintf("Release %s (%s)", parameters.Version, parameters.BuildNumber)
 			commitMessage := title
 
-			service.PushPullRequest(PullRequest{
+			u, err := service.PushPullRequest(PullRequest{
 				TargetBranch:  parameters.Branch,
 				CommitBranch:  commitBranch,
 				FileContent:   bytes,
-				FilePath:      "Folio/Info.plist",
+				FilePath:      service.InfoPlistPath,
 				Title:         title,
 				CommitMessage: commitMessage,
 			})
-
-			sugar.Infof("Releasing `%s (%s)`", infoPlist.VersionString(), infoPlist.BuildNumberString())
+			if err != nil {
+				sugar.Errorf("Failed to create pull request %s", err)
+			} else {
+				m := fmt.Sprintf("Releasing `%s (%s)`", infoPlist.VersionString(), infoPlist.BuildNumberString())
+				sugar.Infof(m)
+				h.slackClient.PostMessage(message.OriginalMessage.Channel, fmt.Sprintf("%s\n%s", m, u), slack.PostMessageParameters{})
+			}
 		}()
 	case actionCancel:
 		responseMessage(w, message.OriginalMessage, fmt.Sprintf("Operation canceled by '%s'.", message.User.Name), "")

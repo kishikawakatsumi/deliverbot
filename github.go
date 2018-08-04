@@ -12,9 +12,10 @@ import (
 )
 
 type GitHubService struct {
-	Repository GitHubRepository
-	Author     CommitAuthor
-	Client     *github.Client
+	Repository    GitHubRepository
+	Author        CommitAuthor
+	InfoPlistPath string
+	Client        *github.Client
 }
 
 type GitHubRepository struct {
@@ -36,7 +37,7 @@ type PullRequest struct {
 	CommitMessage string
 }
 
-func NewGitHubService(token string, repo GitHubRepository, author CommitAuthor) *GitHubService {
+func NewGitHubService(token string, repo GitHubRepository, author CommitAuthor, infoPlistPath string) *GitHubService {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
@@ -45,9 +46,10 @@ func NewGitHubService(token string, repo GitHubRepository, author CommitAuthor) 
 	client := github.NewClient(tc)
 
 	return &GitHubService{
-		Repository: repo,
-		Author:     author,
-		Client:     client,
+		Repository:    repo,
+		Author:        author,
+		Client:        client,
+		InfoPlistPath: infoPlistPath,
 	}
 }
 
@@ -147,7 +149,7 @@ func (g *GitHubService) PushCommit(ref *github.Reference, tree *github.Tree, com
 }
 
 // CreatePR creates a pull request. Based on: https://godoc.org/github.com/google/go-github/github#example-PullRequestsService-Create
-func (g *GitHubService) CreatePullRequest(targetBranch, commitBranch, title, description string) (err error) {
+func (g *GitHubService) CreatePullRequest(targetBranch, commitBranch, title, description string) (*github.PullRequest, error) {
 	branch := fmt.Sprintf("%s:%s", g.Repository.Owner, commitBranch)
 
 	newPR := &github.NewPullRequest{
@@ -160,39 +162,41 @@ func (g *GitHubService) CreatePullRequest(targetBranch, commitBranch, title, des
 
 	pr, _, err := g.Client.PullRequests.Create(context.Background(), g.Repository.Owner, g.Repository.Name, newPR)
 	if err != nil {
-		return err
+		return pr, err
 	}
 
 	sugar.Infof("PR created: %s\n", pr.GetHTMLURL())
-	return nil
+	return pr, nil
 }
 
-func (g *GitHubService) PushPullRequest(pullRequest PullRequest) error {
+func (g *GitHubService) PushPullRequest(pullRequest PullRequest) (*string, error) {
 	ref, err := g.CreateBranch(pullRequest.TargetBranch, pullRequest.CommitBranch)
 	if err != nil {
 		sugar.Errorf("Unable to get/create the commit reference: %s\n", err)
-		return err
+		return nil, err
 	}
 	if ref == nil {
 		sugar.Errorf("No error where returned but the reference is nil")
-		return err
+		return nil, err
 	}
 
 	tree, err := g.CreateTree(ref, pullRequest.FileContent, pullRequest.FilePath)
 	if err != nil {
 		sugar.Errorf("Unable to create the tree based on the provided files: %s\n", err)
-		return err
+		return nil, err
 	}
 
 	if err := g.PushCommit(ref, tree, pullRequest.CommitMessage); err != nil {
 		sugar.Errorf("Unable to create the commit: %s\n", err)
-		return err
+		return nil, err
 	}
 
-	if err := g.CreatePullRequest(pullRequest.TargetBranch, pullRequest.CommitBranch, pullRequest.Title, pullRequest.CommitMessage); err != nil {
+	pr, err := g.CreatePullRequest(pullRequest.TargetBranch, pullRequest.CommitBranch, pullRequest.Title, pullRequest.CommitMessage)
+	if err != nil {
 		log.Fatalf("Error while creating the pull request: %s", err)
-		return err
+		return nil, err
 	}
 
-	return nil
+	u := pr.GetHTMLURL()
+	return &u, nil
 }

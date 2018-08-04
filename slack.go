@@ -15,7 +15,7 @@ const (
 	actionCancel      = "cancel"
 
 	callbackID  = "deliver:parameters"
-	helpMessage = "```\nCommand:\n\t@applebot deliver\n```"
+	helpMessage = "```\nUsage:\n\t@applebot deliver\n\t@applebot ping\n\t@applebot help```"
 )
 
 type SlackListener struct {
