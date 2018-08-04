@@ -38,7 +38,7 @@ func _main(_ []string) int {
 
 		repo := GitHubRepository{Owner: config.GitHubRepositoryOwner, Name: config.GitHubRepositoryName}
 		author := CommitAuthor{Name: config.GitCommitAuthorName, Email: config.GitCommitAuthorEmail}
-		service = NewGitHubService(config.GitHubToken, repo, author)
+		service = NewGitHubService(config.GitHubToken, repo, author, config.InfoPlistPath)
 
 		sugar.Infof("Start slack event listening")
 		client := slack.New(config.BotToken)
