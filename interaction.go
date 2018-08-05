@@ -114,14 +114,14 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			InfoPlist:          tempFile.Name(),
 		}
 
-		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nCurrent Version: `%s (%s)`\nNext Version:", parameters.Branch, currentVersion, currentBuildNumber), versionOptions(buildParameters))
+		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s` ✔︎\nCurrent Version: `%s (%s)`\nNext Version:", parameters.Branch, currentVersion, currentBuildNumber), versionOptions(buildParameters))
 	case actionVersion:
 		currentVersion := fmt.Sprintf("%s (%s)", parameters.CurrentVersion, parameters.CurrentBuildNumber)
-		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nCurrent Version: `%s`\nNext Version: `%s`\nBuild:", parameters.Branch, currentVersion, parameters.Version), buildNumberOptions(parameters))
+		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s` ✔︎\nCurrent Version: `%s`\nNext Version: `%s` ✔︎\nBuild:", parameters.Branch, currentVersion, parameters.Version), buildNumberOptions(parameters))
 	case actionBuildNumber:
 		currentVersion := fmt.Sprintf("%s (%s)", parameters.CurrentVersion, parameters.CurrentBuildNumber)
 		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
-		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nCurrent Version: `%s`\nNext Version: `%s`", parameters.Branch, currentVersion, nextVersion), okCancelOptions(parameters))
+		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s` ✔︎\nCurrent Version: `%s`\nNext Version: `%s` ✔︎", parameters.Branch, currentVersion, nextVersion), okCancelOptions(parameters))
 	case actionRun:
 		bytes, err := ioutil.ReadFile(parameters.InfoPlist)
 		if err != nil {
@@ -134,7 +134,8 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		responseMessage(w, message.OriginalMessage, "Running ...", "")
+		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
+		responseMessage(w, message.OriginalMessage, fmt.Sprintf("Releasing `%s` ...", nextVersion), "")
 
 		go func() {
 			infoPlist.SetVersion(parameters.Version, parameters.BuildNumber)
