@@ -304,7 +304,8 @@ func cancelAction() slack.AttachmentAction {
 	return slack.AttachmentAction{
 		Name:  actionCancel,
 		Text:  "Cancel",
-		Value: "",
+		Value: "cancel",
 		Type:  "button",
+		Style: "danger",
 	}
 }
