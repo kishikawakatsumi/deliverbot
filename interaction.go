@@ -114,9 +114,10 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			InfoPlist:          tempFile.Name(),
 		}
 
-		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nVersion:", parameters.Branch), versionOptions(buildParameters))
+		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nCurrent Version: `%s (%s)`\nNext Version:", parameters.Branch, currentVersion, currentBuildNumber), versionOptions(buildParameters))
 	case actionVersion:
-		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nVersion: `%s`\nBuild:", parameters.Branch, parameters.Version), buildNumberOptions(parameters))
+		currentVersion := fmt.Sprintf("%s (%s)", parameters.CurrentVersion, parameters.CurrentBuildNumber)
+		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s`\nCurrent Version: `%s`\nNext Version: `%s`\nBuild:", parameters.Branch, currentVersion, parameters.Version), buildNumberOptions(parameters))
 	case actionBuildNumber:
 		currentVersion := fmt.Sprintf("%s (%s)", parameters.CurrentVersion, parameters.CurrentBuildNumber)
 		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
@@ -154,11 +155,13 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				CommitMessage: commitMessage,
 			})
 			if err != nil {
-				sugar.Errorf("Failed to create pull request %s", err)
+				e := fmt.Errorf("failed to create pull request %s", err)
+				sugar.Error(e)
+				h.slackClient.PostMessage(message.Channel.ID, fmt.Sprintf("%s", e), slack.PostMessageParameters{})
 			} else {
 				m := fmt.Sprintf("Releasing `%s (%s)`", infoPlist.VersionString(), infoPlist.BuildNumberString())
 				sugar.Infof(m)
-				h.slackClient.PostMessage(message.OriginalMessage.Channel, fmt.Sprintf("%s\n%s", m, u), slack.PostMessageParameters{})
+				h.slackClient.PostMessage(message.Channel.ID, fmt.Sprintf("%s\n%s", m, *u), slack.PostMessageParameters{})
 			}
 		}()
 	case actionCancel:
