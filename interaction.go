@@ -16,13 +16,6 @@ type interactionHandler struct {
 	verificationToken string
 }
 
-var cancelAction = slack.AttachmentAction{
-	Name:  actionCancel,
-	Text:  "Cancel",
-	Value: "",
-	Type:  "button",
-}
-
 func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		sugar.Errorf("Invalid method: %s", r.Method)
@@ -252,7 +245,7 @@ func versionOptions(parameters BuildParameters) []slack.AttachmentAction {
 		patchVersionAction,
 		minorVersionAction,
 		majorVersionAction,
-		cancelAction,
+		cancelAction(),
 	}
 	return actions
 }
@@ -287,7 +280,7 @@ func buildNumberOptions(parameters BuildParameters) []slack.AttachmentAction {
 			Type:    "select",
 			Options: options,
 		},
-		cancelAction,
+		cancelAction(),
 	}
 	return actions
 }
@@ -302,7 +295,16 @@ func okCancelOptions(parameters BuildParameters) []slack.AttachmentAction {
 	}
 	actions := []slack.AttachmentAction{
 		okAction,
-		cancelAction,
+		cancelAction(),
 	}
 	return actions
+}
+
+func cancelAction() slack.AttachmentAction {
+	return slack.AttachmentAction{
+		Name:  actionCancel,
+		Text:  "Cancel",
+		Value: "",
+		Type:  "button",
+	}
 }
