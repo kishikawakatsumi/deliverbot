@@ -141,7 +141,7 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			bytes, _ := infoPlist.serialized()
 
 			timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-			commitBranch := fmt.Sprintf("_release/%s-%s-%s", parameters.Version, parameters.BuildNumber, timestamp)
+			commitBranch := fmt.Sprintf("release/%s-%s-%s", parameters.Version, parameters.BuildNumber, timestamp)
 			title := fmt.Sprintf("Release %s (%s)", parameters.Version, parameters.BuildNumber)
 			commitMessage := title
 
