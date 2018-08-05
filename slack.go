@@ -127,6 +127,7 @@ func branchOptions(parameters BuildParameters) ([]slack.AttachmentAction, error)
 			Type:    "select",
 			Options: options,
 		},
+		cancelAction,
 	}
 	return actions, nil
 }
