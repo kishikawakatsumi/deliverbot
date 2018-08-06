@@ -121,8 +121,8 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case actionBuildNumber:
 		currentVersion := fmt.Sprintf("%s (%s)", parameters.CurrentVersion, parameters.CurrentBuildNumber)
 		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
-		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s` ✔︎\nCurrent Version: `%s`\nNext Version: `%s` ✔︎", parameters.Branch, currentVersion, nextVersion), okCancelOptions(parameters))
-	case actionRun:
+		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s` ✔︎\nCurrent Version: `%s`\nNext Version: `%s` ✔︎", parameters.Branch, currentVersion, nextVersion), runOptions(parameters))
+	case actionRelease, actionExternal, actionInternal:
 		bytes, err := ioutil.ReadFile(parameters.InfoPlist)
 		if err != nil {
 			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
@@ -143,7 +143,7 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			bytes, _ := infoPlist.serialized()
 
 			timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-			commitBranch := fmt.Sprintf("release/%s-%s-%s", parameters.Version, parameters.BuildNumber, timestamp)
+			commitBranch := fmt.Sprintf("%s/%s-%s-%s", branchPrefix(action.Name), parameters.Version, parameters.BuildNumber, timestamp)
 			title := fmt.Sprintf("Release %s (%s)", parameters.Version, parameters.BuildNumber)
 			commitMessage := title
 
@@ -289,16 +289,30 @@ func buildNumberOptions(parameters BuildParameters) []slack.AttachmentAction {
 	return actions
 }
 
-func okCancelOptions(parameters BuildParameters) []slack.AttachmentAction {
-	okAction := slack.AttachmentAction{
-		Name:  actionRun,
-		Text:  "　OK　",
+func runOptions(parameters BuildParameters) []slack.AttachmentAction {
+	releaseAction := slack.AttachmentAction{
+		Name:  actionRelease,
+		Text:  " / ⚙",
 		Value: parameters.string(),
 		Type:  "button",
 		Style: "primary",
 	}
+	externalAction := slack.AttachmentAction{
+		Name:  actionRelease,
+		Text:  " TestFlight",
+		Value: parameters.string(),
+		Type:  "button",
+	}
+	internalAction := slack.AttachmentAction{
+		Name:  actionRelease,
+		Text:  "⚙ Fabric Beta",
+		Value: parameters.string(),
+		Type:  "button",
+	}
 	actions := []slack.AttachmentAction{
-		okAction,
+		releaseAction,
+		externalAction,
+		internalAction,
 		cancelAction(),
 	}
 	return actions
@@ -312,4 +326,16 @@ func cancelAction() slack.AttachmentAction {
 		Type:  "button",
 		Style: "danger",
 	}
+}
+
+func branchPrefix(actionName string) string {
+	switch actionName {
+	case actionRelease:
+		return "release"
+	case actionExternal:
+		return "testflight"
+	case actionInternal:
+		return "fabric-beta"
+	}
+	return "release"
 }

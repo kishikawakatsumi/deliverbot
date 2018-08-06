@@ -11,11 +11,13 @@ const (
 	actionBranch      = "branch"
 	actionVersion     = "version"
 	actionBuildNumber = "buildNumber"
-	actionRun         = "run"
+	actionRelease     = "release"
+	actionExternal    = "external"
+	actionInternal    = "internal"
 	actionCancel      = "cancel"
 
-	callbackID  = "deliver:parameters"
-	helpMessage = "```\nUsage:\n\t@applebot deliver\n\t@applebot ping\n\t@applebot help```"
+	callbackID  = "deliver"
+	helpMessage = "```\nUsage:\n\t@applebot\n\t@applebot ping\n\t@applebot help```"
 )
 
 type SlackListener struct {
@@ -51,8 +53,7 @@ func (s *SlackListener) handleMessageEvent(ev *slack.MessageEvent) error {
 
 	mentionToBot := fields[0] == fmt.Sprintf("<@%s>", s.botID)
 	if len(fields) == 1 && mentionToBot {
-		err := s.respond(ev.Channel, helpMessage)
-		return err
+		return s.deliver(ev)
 	}
 	if len(fields) == 2 && mentionToBot && fields[1] == "ping" {
 		err := s.respond(ev.Channel, "pong")
@@ -63,29 +64,38 @@ func (s *SlackListener) handleMessageEvent(ev *slack.MessageEvent) error {
 		return err
 	}
 	if len(fields) == 2 && mentionToBot && fields[1] == "deliver" {
-		buildParameters := BuildParameters{}
-
-		actions, err := branchOptions(buildParameters)
-		if err != nil {
-			return err
-		}
-		messageParameters := slack.PostMessageParameters{
-			Attachments: []slack.Attachment{
-				{
-					Text:       "Branch:",
-					CallbackID: callbackID,
-					Actions:    actions,
-				},
-			},
-		}
-
-		if _, _, err := s.client.PostMessage(ev.Channel, "", messageParameters); err != nil {
-			return fmt.Errorf("failed to post message: %s", err)
-		}
-		return nil
+		return s.deliver(ev)
 	}
 
 	return nil
+}
+
+func (s *SlackListener) deliver(ev *slack.MessageEvent) error {
+	buildParameters := BuildParameters{}
+
+	actions, err := branchOptions(buildParameters)
+	if err != nil {
+		return err
+	}
+	messageParameters := slack.PostMessageParameters{
+		Attachments: []slack.Attachment{
+			{
+				Text:       "Branch:",
+				CallbackID: callbackID,
+				Actions:    actions,
+			},
+		},
+	}
+
+	if _, _, err := s.client.PostMessage(ev.Channel, "", messageParameters); err != nil {
+		return fmt.Errorf("failed to post message: %s", err)
+	}
+	return nil
+}
+
+func (s *SlackListener) respond(channel string, text string) error {
+	_, _, err := s.client.PostMessage(channel, text, slack.NewPostMessageParameters())
+	return fmt.Errorf("failed to post message: %s", err)
 }
 
 func branchOptions(parameters BuildParameters) ([]slack.AttachmentAction, error) {
@@ -130,9 +140,4 @@ func branchOptions(parameters BuildParameters) ([]slack.AttachmentAction, error)
 		cancelAction(),
 	}
 	return actions, nil
-}
-
-func (s *SlackListener) respond(channel string, text string) error {
-	_, _, err := s.client.PostMessage(channel, text, slack.NewPostMessageParameters())
-	return fmt.Errorf("failed to post message: %s", err)
 }
