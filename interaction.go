@@ -292,19 +292,19 @@ func buildNumberOptions(parameters BuildParameters) []slack.AttachmentAction {
 func runOptions(parameters BuildParameters) []slack.AttachmentAction {
 	releaseAction := slack.AttachmentAction{
 		Name:  actionRelease,
-		Text:  " / ⚙",
+		Text:  " TestFlight ⚙ Beta",
 		Value: parameters.string(),
 		Type:  "button",
 		Style: "primary",
 	}
 	externalAction := slack.AttachmentAction{
-		Name:  actionRelease,
+		Name:  actionExternal,
 		Text:  " TestFlight",
 		Value: parameters.string(),
 		Type:  "button",
 	}
 	internalAction := slack.AttachmentAction{
-		Name:  actionRelease,
+		Name:  actionInternal,
 		Text:  "⚙ Fabric Beta",
 		Value: parameters.string(),
 		Type:  "button",
