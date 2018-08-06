@@ -135,7 +135,7 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
-		responseMessage(w, message.OriginalMessage, fmt.Sprintf("Releasing `%s` ...", nextVersion), "")
+		responseMessage(w, message.OriginalMessage, fmt.Sprintf("Releasing `%s` to %s ...", nextVersion, destination(action.Name)), "")
 
 		go func() {
 			infoPlist.SetVersion(parameters.Version, parameters.BuildNumber)
@@ -337,5 +337,17 @@ func branchPrefix(actionName string) string {
 	case actionInternal:
 		return "fabric-beta"
 	}
-	return "release"
+	return "null"
+}
+
+func destination(actionName string) string {
+	switch actionName {
+	case actionRelease:
+		return "TestFlight and Beta"
+	case actionExternal:
+		return "TestFlight"
+	case actionInternal:
+		return "Fabric Beta"
+	}
+	return "Unknown"
 }
