@@ -331,11 +331,11 @@ func cancelAction() slack.AttachmentAction {
 func branchPrefix(actionName string) string {
 	switch actionName {
 	case actionRelease:
-		return "release"
+		return "_release"
 	case actionExternal:
-		return "testflight"
+		return "_testflight"
 	case actionInternal:
-		return "fabric-beta"
+		return "_fabric-beta"
 	}
 	return "null"
 }
