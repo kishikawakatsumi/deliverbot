@@ -200,3 +200,22 @@ func (g *GitHubService) PushPullRequest(pullRequest PullRequest) (*string, error
 	u := pr.GetHTMLURL()
 	return &u, nil
 }
+
+func (g *GitHubService) LatestTag() (*github.RepositoryTag, error) {
+	tags, _, err := g.Client.Repositories.ListTags(context.Background(), g.Repository.Owner, g.Repository.Name, &github.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch GitHub tags: %s", err)
+	}
+	if len(tags) == 0 {
+		return nil, fmt.Errorf("no tags")
+	}
+	return tags[0], nil
+}
+
+func (g *GitHubService) Commits(base string, head string) ([]github.RepositoryCommit, error) {
+	commitsComparison, _, err := g.Client.Repositories.CompareCommits(context.Background(), g.Repository.Owner, g.Repository.Name, base, head)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch GitHub commits: %s", err)
+	}
+	return commitsComparison.Commits, nil
+}

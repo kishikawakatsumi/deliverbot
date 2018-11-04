@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -145,7 +146,10 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 			commitBranch := fmt.Sprintf("%s/%s-%s-%s", branchPrefix(action.Name), parameters.Version, parameters.BuildNumber, timestamp)
 			title := fmt.Sprintf("Release %s (%s)", parameters.Version, parameters.BuildNumber)
-			commitMessage := title
+
+			changelog := generateChangeLog(service)
+
+			commitMessage := fmt.Sprintf("%s", changelog)
 
 			u, err := service.PushPullRequest(PullRequest{
 				TargetBranch:  parameters.Branch,
@@ -350,4 +354,27 @@ func destination(actionName string) string {
 		return "Fabric Beta"
 	}
 	return "Unknown"
+}
+
+func generateChangeLog(service *GitHubService) string {
+	latestTag, err := service.LatestTag()
+	if err != nil {
+		return ""
+	}
+	commits, err := service.Commits(*latestTag.Name, "master")
+	if err != nil {
+		return ""
+	}
+
+	changelog := []string{}
+	for _, commit := range commits {
+		message := *commit.Commit.Message
+		log := fmt.Sprintf("* %s [%s](%s) ([%s](%s))", strings.Split(message, "\n")[0], (*commit.SHA)[:7], *commit.HTMLURL, *commit.Author.Login, *commit.Author.HTMLURL)
+		changelog = append([]string{log}, changelog...)
+	}
+
+	section := fmt.Sprintf("## [compare](https://github.com/%s/%s/compare/%s...master) (%s)", service.Repository.Owner, service.Repository.Name, *latestTag.Name, time.Now().Format("2006-01-02"))
+	changelog = append([]string{section}, changelog...)
+
+	return strings.Join(changelog, "\n")
 }
