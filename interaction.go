@@ -229,7 +229,7 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				sugar.Error(e)
 				h.slackClient.PostMessage(message.Channel.ID, fmt.Sprintf("%s", e), slack.PostMessageParameters{})
 			} else {
-				m := fmt.Sprintf("Releasing `%s (%s)`", infoPlist.VersionString(), infoPlist.BuildNumberString())
+				m := fmt.Sprintf("Releasing `%s (%s)`", parameters.Version, parameters.BuildNumber)
 				sugar.Infof(m)
 				h.slackClient.PostMessage(message.Channel.ID, fmt.Sprintf("%s\n%s", m, *u), slack.PostMessageParameters{})
 			}
