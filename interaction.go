@@ -147,7 +147,7 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			commitBranch := fmt.Sprintf("%s/%s-%s-%s", branchPrefix(action.Name), parameters.Version, parameters.BuildNumber, timestamp)
 			title := fmt.Sprintf("Release %s (%s)", parameters.Version, parameters.BuildNumber)
 
-			changelog := generateChangeLog(service)
+			changelog := generateChangeLog(service, parameters.Version)
 
 			commitMessage := fmt.Sprintf("%s", changelog)
 
@@ -356,7 +356,7 @@ func destination(actionName string) string {
 	return "Unknown"
 }
 
-func generateChangeLog(service *GitHubService) string {
+func generateChangeLog(service *GitHubService, nextVersion string) string {
 	latestTag, err := service.LatestTag()
 	if err != nil {
 		return ""
@@ -376,7 +376,7 @@ func generateChangeLog(service *GitHubService) string {
 		changelog = append([]string{log}, changelog...)
 	}
 
-	section := fmt.Sprintf("## [compare](https://github.com/%s/%s/compare/%s...master) (%s)", service.Repository.Owner, service.Repository.Name, *latestTag.Name, time.Now().Format("2006-01-02"))
+	section := fmt.Sprintf("## [%s](https://github.com/%s/%s/compare/%s...master) (%s)", nextVersion, service.Repository.Owner, service.Repository.Name, *latestTag.Name, time.Now().Format("2006-01-02"))
 	changelog = append([]string{section}, changelog...)
 
 	return strings.Join(changelog, "\n")
