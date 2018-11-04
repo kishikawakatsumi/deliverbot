@@ -370,7 +370,7 @@ func generateChangeLog(service *GitHubService, nextVersion string) string {
 	for _, commit := range commits {
 		var message = *commit.Commit.Message
 		if *commit.Commit.Committer.Name == "GitHub" && strings.HasPrefix(message, "Merge pull request") {
-			message = strings.Join(strings.Fields(message)[:4], " ")
+			message = ":twisted_rightwards_arrows: " + strings.Join(strings.Fields(message)[:4], " ")
 		}
 		log := fmt.Sprintf("* %s [%s](%s) ([%s](%s))", strings.Split(message, "\n")[0], (*commit.SHA)[:7], *commit.HTMLURL, *commit.Author.Login, *commit.Author.HTMLURL)
 		changelog = append([]string{log}, changelog...)
