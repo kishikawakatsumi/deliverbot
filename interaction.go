@@ -441,7 +441,7 @@ func generateChangeLog(service *GitHubService, nextVersion string, branch string
 		changelog = append([]string{log}, changelog...)
 	}
 
-	section := fmt.Sprintf("## [%s](https://github.com/%s/%s/compare/%s...master) (%s)", nextVersion, service.Repository.Owner, service.Repository.Name, *latestTag.Name, time.Now().Format("2006-01-02"))
+	section := fmt.Sprintf("## [%s](https://github.com/%s/%s/compare/%s...%s) (%s)", nextVersion, service.Repository.Owner, service.Repository.Name, *latestTag.Name, branch, time.Now().Format("2006-01-02"))
 	changelog = append([]string{section}, changelog...)
 
 	return strings.Join(changelog, "\n")
