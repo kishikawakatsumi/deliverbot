@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/blang/semver"
 	"github.com/nlopes/slack"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -58,48 +60,102 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch action.Name {
 	case actionBranch:
+		// FIXME
+		var currentVersion string
+		var currentBuildNumber string
+		var nextPatch string
+		var nextMinor string
+		var nextMajor string
+		var nextBuildNumber string
+		var tempFile *os.File
+
 		file, err := service.File(parameters.Branch, service.InfoPlistPath)
 		if err != nil {
 			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
 			return
 		}
 
-		infoPlist, err := NewInfoPlist(file)
+		tempFile, err = ioutil.TempFile("", "applebot-")
 		if err != nil {
 			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
 			return
 		}
-		tempFile, err := ioutil.TempFile("", "applebot-")
 
-		bytes, err := infoPlist.serialized()
-		if err != nil {
-			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
-			return
-		}
-		tempFile.Write(bytes)
+		if strings.HasSuffix(service.InfoPlistPath, ".xcconfig") {
+			versions := map[string]string{}
 
-		currentVersion := infoPlist.VersionString()
-		currentBuildNumber := infoPlist.BuildNumberString()
+			lines := strings.Split(string(file), "\n")
+			for _, line := range lines {
+				if !strings.Contains(line, "=") {
+					continue
+				}
+				pair := strings.Split(line, "=")
+				versions[strings.TrimSpace(pair[0])] = strings.TrimSpace(pair[1])
+			}
 
-		nextPatch, err := infoPlist.NextPatch()
-		if err != nil {
-			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
-			return
-		}
-		nextMinor, err := infoPlist.NextMinor()
-		if err != nil {
-			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
-			return
-		}
-		nextMajor, err := infoPlist.NextMajor()
-		if err != nil {
-			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
-			return
-		}
-		nextBuildNumber, err := infoPlist.NextBuildNumber()
-		if err != nil {
-			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
-			return
+			currentVersion = versions["APP_VERSION"]
+			currentBuildNumber = versions["BUILD_VERSION"]
+
+			version, err := semver.Make(currentVersion)
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
+			version.Patch += 1
+			nextPatch = version.String()
+
+			version.Minor += 1
+			version.Patch = 0
+			nextMinor = version.String()
+
+			version.Major += 1
+			version.Minor = 0
+			version.Patch = 0
+			nextMajor = version.String()
+
+			buildNumber, err := strconv.Atoi(currentBuildNumber)
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
+			nextBuildNumber = strconv.Itoa(buildNumber + 1)
+		} else {
+			infoPlist, err := NewInfoPlist(file)
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
+
+			bytes, err := infoPlist.serialized()
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
+			tempFile.Write(bytes)
+
+			currentVersion = infoPlist.VersionString()
+			currentBuildNumber = infoPlist.BuildNumberString()
+
+			nextPatch, err = infoPlist.NextPatch()
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
+			nextMinor, err = infoPlist.NextMinor()
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
+			nextMajor, err = infoPlist.NextMajor()
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
+			nextBuildNumber, err = infoPlist.NextBuildNumber()
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
 		}
 
 		buildParameters := BuildParameters{
@@ -124,24 +180,33 @@ func (h interactionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
 		responseAction(w, message.OriginalMessage, fmt.Sprintf("Branch: `%s` ✔︎\nCurrent Version: `%s`\nNext Version: `%s` ✔︎", parameters.Branch, currentVersion, nextVersion), runOptions(parameters))
 	case actionRelease, actionExternal, actionInternal:
+		// FIXME
+
 		bytes, err := ioutil.ReadFile(parameters.InfoPlist)
 		if err != nil {
 			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
 			return
 		}
-		infoPlist, err := NewInfoPlist(bytes)
-		if err != nil {
-			responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
-			return
+
+		var infoPlist *InfoPlist
+		if strings.HasSuffix(service.InfoPlistPath, "Info.plist") {
+			infoPlist, err = NewInfoPlist(bytes)
+			if err != nil {
+				responseError(w, message.OriginalMessage, "Error occurred.", fmt.Sprintf("%s", err))
+				return
+			}
 		}
 
 		nextVersion := fmt.Sprintf("%s (%s)", parameters.Version, parameters.BuildNumber)
 		responseMessage(w, message.OriginalMessage, fmt.Sprintf("Releasing `%s` to %s ...", nextVersion, destination(action.Name)), "")
 
 		go func() {
-			infoPlist.SetVersion(parameters.Version, parameters.BuildNumber)
-
-			bytes, _ := infoPlist.serialized()
+			if strings.HasSuffix(service.InfoPlistPath, "Info.plist") {
+				infoPlist.SetVersion(parameters.Version, parameters.BuildNumber)
+				bytes, _ = infoPlist.serialized()
+			} else {
+				bytes = []byte(fmt.Sprintf("APP_VERSION = %s\nBUILD_VERSION = %s", parameters.Version, parameters.BuildNumber))
+			}
 
 			timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 			commitBranch := fmt.Sprintf("%s/%s-%s-%s", branchPrefix(action.Name), parameters.Version, parameters.BuildNumber, timestamp)

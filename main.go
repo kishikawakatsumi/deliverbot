@@ -36,6 +36,9 @@ func _main(_ []string) int {
 			return fmt.Errorf("failed to load toml file: %s", err)
 		}
 
+		// FIXME: Pass Version.xcconfig path from env
+		config.InfoPlistPath = "Configurations/Version.xcconfig"
+
 		repo := GitHubRepository{Owner: config.GitHubRepositoryOwner, Name: config.GitHubRepositoryName}
 		author := CommitAuthor{Name: config.GitCommitAuthorName, Email: config.GitCommitAuthorEmail}
 		service = NewGitHubService(config.GitHubToken, repo, author, config.InfoPlistPath)
