@@ -1,9 +1,10 @@
 # deliverbot
 
-## install
+## Install
 ```shell
 $ go get -u github.com/kishikawakatsumi/deliverbot
 ```
+
 
 ## Demo
 
@@ -21,3 +22,5 @@ $ go get -u github.com/kishikawakatsumi/deliverbot
 ```
 
 You can confirm these options via `deliverbot --help`.
+
+
