@@ -186,7 +186,7 @@ func (g *GitHubService) PushPullRequest(pullRequest PullRequest) (*string, error
 		return nil, err
 	}
 
-	if err := g.PushCommit(ref, tree, pullRequest.CommitMessage); err != nil {
+	if err := g.PushCommit(ref, tree, pullRequest.Title); err != nil {
 		sugar.Errorf("Unable to create the commit: %s\n", err)
 		return nil, err
 	}
