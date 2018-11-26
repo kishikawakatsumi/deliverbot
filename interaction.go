@@ -422,27 +422,28 @@ func destination(actionName string) string {
 }
 
 func generateChangeLog(service *GitHubService, nextVersion string, branch string) string {
-	latestTag, err := service.LatestTag()
-	if err != nil {
-		return ""
-	}
-	commits, err := service.Commits(*latestTag.Name, branch)
-	if err != nil {
-		return ""
-	}
-
-	changelog := []string{}
-	for _, commit := range commits {
-		var message = *commit.Commit.Message
-		if *commit.Commit.Committer.Name == "GitHub" && strings.HasPrefix(message, "Merge pull request") {
-			message = ":twisted_rightwards_arrows: " + strings.Join(strings.Fields(message)[:4], " ")
-		}
-		log := fmt.Sprintf("* %s [%s](%s) ([%s](%s))", strings.Split(message, "\n")[0], (*commit.SHA)[:7], *commit.HTMLURL, *commit.Author.Login, *commit.Author.HTMLURL)
-		changelog = append([]string{log}, changelog...)
-	}
-
-	section := fmt.Sprintf("## [%s](https://github.com/%s/%s/compare/%s...%s) (%s)", nextVersion, service.Repository.Owner, service.Repository.Name, *latestTag.Name, branch, time.Now().Format("2006-01-02"))
-	changelog = append([]string{section}, changelog...)
-
-	return strings.Join(changelog, "\n")
+	return ""
+	//latestTag, err := service.LatestTag()
+	//if err != nil {
+	//	return ""
+	//}
+	//commits, err := service.Commits(*latestTag.Name, branch)
+	//if err != nil {
+	//	return ""
+	//}
+	//
+	//changelog := []string{}
+	//for _, commit := range commits {
+	//	var message = *commit.Commit.Message
+	//	if *commit.Commit.Committer.Name == "GitHub" && strings.HasPrefix(message, "Merge pull request") {
+	//		message = ":twisted_rightwards_arrows: " + strings.Join(strings.Fields(message)[:4], " ")
+	//	}
+	//	log := fmt.Sprintf("* %s [%s](%s) ([%s](%s))", strings.Split(message, "\n")[0], (*commit.SHA)[:7], *commit.HTMLURL, *commit.Author.Login, *commit.Author.HTMLURL)
+	//	changelog = append([]string{log}, changelog...)
+	//}
+	//
+	//section := fmt.Sprintf("## [%s](https://github.com/%s/%s/compare/%s...%s) (%s)", nextVersion, service.Repository.Owner, service.Repository.Name, *latestTag.Name, branch, time.Now().Format("2006-01-02"))
+	//changelog = append([]string{section}, changelog...)
+	//
+	//return strings.Join(changelog, "\n")
 }
